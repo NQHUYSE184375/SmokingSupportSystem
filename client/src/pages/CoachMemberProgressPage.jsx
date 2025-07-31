@@ -32,17 +32,45 @@ const CoachMemberProgressPage = () => {
     if (memberId) {
       setLoading(true);
       setError('');
-      axios.get(`http://localhost:5000/api/coach/member/${memberId}/progress`, {
+      
+      // Kiểm tra xem member có được gán cho coach này không trước khi lấy tiến trình
+      axios.get(`http://localhost:5000/api/coach/members`, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => {
-          setProgressHistory(res.data.history || []);
-          setSmokingProfile(res.data.smokingProfile || null);
-          setCoachQuitPlan(res.data.coachQuitPlan || null);
-          setSystemQuitPlan(res.data.systemQuitPlan || null);
+          const assignedMembers = res.data.members || [];
+          const isAssigned = assignedMembers.some(member => member.Id === parseInt(memberId));
+          
+          if (!isAssigned) {
+            setError('Bạn không có quyền xem tiến trình của thành viên này.');
+            setLoading(false);
+            return;
+          }
+
+          // Nếu được gán, lấy thông tin tiến trình
+          return axios.get(`http://localhost:5000/api/coach/member/${memberId}/progress`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
         })
-        .catch(() => setError('Không thể tải tiến trình của thành viên.'))
+        .then(res => {
+          if (res && res.data) {
+            setProgressHistory(res.data.history || []);
+            setSmokingProfile(res.data.smokingProfile || null);
+            setCoachQuitPlan(res.data.coachQuitPlan || null);
+            setSystemQuitPlan(res.data.systemQuitPlan || null);
+          }
+        })
+        .catch((err) => {
+          console.error('Error fetching progress:', err);
+          if (err.response?.status === 403) {
+            setError('Bạn không có quyền xem tiến trình của thành viên này.');
+          } else {
+            setError('Không thể tải tiến trình của thành viên.');
+          }
+        })
         .finally(() => setLoading(false));
+
+      // Lấy thông tin member
       axios.get(`http://localhost:5000/api/user/${memberId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -51,17 +79,32 @@ const CoachMemberProgressPage = () => {
     } else {
       setLoading(true);
       setError('');
-      axios.get('http://localhost:5000/api/booking/accepted', {
+      
+      // Lấy danh sách thành viên được gán cho coach
+      axios.get('http://localhost:5000/api/coach/members', {
         headers: { Authorization: `Bearer ${token}` }
       })
-        .then(res => setMembers(res.data.bookings || []))
-        .catch(() => setError('Không thể tải danh sách thành viên đã nhận lịch.'))
+        .then(res => {
+          const assignedMembers = res.data.members || [];
+          setMembers(assignedMembers);
+        })
+        .catch((err) => {
+          console.error('Error fetching assigned members:', err);
+          setError('Không thể tải danh sách thành viên được gán.');
+        })
         .finally(() => setLoading(false));
     }
   }, [memberId]);
 
   if (loading) return <div className="container py-5 text-center">Đang tải dữ liệu...</div>;
-  if (error) return <div className="container py-5 text-center text-danger">{error}</div>;
+  if (error) return (
+    <div className="container py-5 text-center">
+      <div className="alert alert-danger">{error}</div>
+      <button className="btn btn-primary" onClick={() => navigate('/coach/members/progress')}>
+        Quay lại danh sách
+      </button>
+    </div>
+  );
 
   if (memberId) {
     // Chuẩn bị dữ liệu biểu đồ
@@ -88,108 +131,174 @@ const CoachMemberProgressPage = () => {
 
     return (
       <div className="container py-4 mt-5">
-        <button className="btn btn-link mb-3" onClick={() => navigate(-1)}>&larr; Quay lại</button>
+        <button className="btn btn-link mb-3" onClick={() => navigate('/coach/members/progress')}>
+          &larr; Quay lại danh sách
+        </button>
         <h3 className="mb-4">Tiến trình của thành viên {memberInfo?.username || memberId}</h3>
 
         {/* Thông tin hồ sơ hút thuốc */}
         {smokingProfile && (
-          <div className="mb-4">
-            <h5>Thông tin hồ sơ hút thuốc</h5>
-            <ul>
-              <li>Số điếu/ngày: <b>{smokingProfile.cigarettesPerDay}</b></li>
-              <li>Loại thuốc: <b>{smokingProfile.cigaretteType}</b></li>
-              <li>Tần suất hút: <b>{smokingProfile.smokingFrequency}</b></li>
-              <li>Lý do cai: <b>{smokingProfile.quitReason}</b></li>
-              <li>Tình trạng sức khỏe: <b>{smokingProfile.healthStatus}</b></li>
-            </ul>
+          <div className="card mb-4">
+            <div className="card-header">
+              <h5 className="mb-0">Thông tin hồ sơ hút thuốc</h5>
+            </div>
+            <div className="card-body">
+              <div className="row">
+                <div className="col-md-6">
+                  <p><strong>Số điếu/ngày:</strong> {smokingProfile.cigarettesPerDay}</p>
+                  <p><strong>Loại thuốc:</strong> {smokingProfile.cigaretteType}</p>
+                  <p><strong>Tần suất hút:</strong> {smokingProfile.smokingFrequency}</p>
+                </div>
+                <div className="col-md-6">
+                  <p><strong>Lý do cai:</strong> {smokingProfile.quitReason}</p>
+                  <p><strong>Tình trạng sức khỏe:</strong> {smokingProfile.healthStatus}</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Kế hoạch do coach gán */}
         {coachQuitPlan && (
-          <div className="mb-4">
-            <h5>Kế hoạch cai thuốc do coach gán</h5>
-            <ul>
-              <li>Ngày bắt đầu: <b>{coachQuitPlan.startDate}</b></li>
-              <li>Ngày mục tiêu: <b>{coachQuitPlan.targetDate}</b></li>
-              <li>Số điếu ban đầu: <b>{coachQuitPlan.initialCigarettes}</b></li>
-              <li>Giảm mỗi ngày: <b>{coachQuitPlan.dailyReduction}</b></li>
-              <li>Mô tả: <b>{coachQuitPlan.planDetail}</b></li>
-            </ul>
+          <div className="card mb-4">
+            <div className="card-header bg-primary text-white">
+              <h5 className="mb-0">Kế hoạch cai thuốc do coach gán</h5>
+            </div>
+            <div className="card-body">
+              <div className="row">
+                <div className="col-md-6">
+                  <p><strong>Ngày bắt đầu:</strong> {coachQuitPlan.startDate}</p>
+                  <p><strong>Ngày mục tiêu:</strong> {coachQuitPlan.targetDate}</p>
+                  <p><strong>Số điếu ban đầu:</strong> {coachQuitPlan.initialCigarettes}</p>
+                </div>
+                <div className="col-md-6">
+                  <p><strong>Giảm mỗi ngày:</strong> {coachQuitPlan.dailyReduction}</p>
+                  <p><strong>Mô tả:</strong> {coachQuitPlan.planDetail}</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Kế hoạch mẫu hệ thống */}
         {systemQuitPlan && (
-          <div className="mb-4">
-            <h5>Kế hoạch mẫu hệ thống</h5>
-            <ul>
-              <li>Ngày bắt đầu: <b>{systemQuitPlan.startDate}</b></li>
-              <li>Ngày mục tiêu: <b>{systemQuitPlan.targetDate}</b></li>
-              <li>Số điếu ban đầu: <b>{systemQuitPlan.initialCigarettes}</b></li>
-              <li>Giảm mỗi ngày: <b>{systemQuitPlan.dailyReduction}</b></li>
-              <li>Mô tả: <b>{systemQuitPlan.planDetail}</b></li>
-            </ul>
+          <div className="card mb-4">
+            <div className="card-header bg-info text-white">
+              <h5 className="mb-0">Kế hoạch mẫu hệ thống</h5>
+            </div>
+            <div className="card-body">
+              <div className="row">
+                <div className="col-md-6">
+                  <p><strong>Ngày bắt đầu:</strong> {systemQuitPlan.startDate}</p>
+                  <p><strong>Ngày mục tiêu:</strong> {systemQuitPlan.targetDate}</p>
+                  <p><strong>Số điếu ban đầu:</strong> {systemQuitPlan.initialCigarettes}</p>
+                </div>
+                <div className="col-md-6">
+                  <p><strong>Giảm mỗi ngày:</strong> {systemQuitPlan.dailyReduction}</p>
+                  <p><strong>Mô tả:</strong> {systemQuitPlan.planDetail}</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Biểu đồ tiến trình */}
-        <div className="mb-4">
-          <Line data={chartData} options={chartOptions} />
-        </div>
+        {progressHistory.length > 0 && (
+          <div className="card mb-4">
+            <div className="card-header">
+              <h5 className="mb-0">Biểu đồ tiến trình</h5>
+            </div>
+            <div className="card-body">
+              <Line data={chartData} options={chartOptions} />
+            </div>
+          </div>
+        )}
 
         {/* Bảng lịch sử nhật ký */}
-        <div className="mb-4">
-          <h5>Lịch sử nhật ký hút thuốc</h5>
-          {progressHistory.length === 0 ? (
-            <div className="alert alert-info">Chưa có nhật ký tiến trình nào.</div>
-          ) : (
-            <table className="table table-bordered">
-              <thead>
-                <tr>
-                  <th>Ngày</th>
-                  <th>Số điếu thuốc</th>
-                  <th>Cảm xúc/Ghi chú</th>
-                </tr>
-              </thead>
-              <tbody>
-                {progressHistory.map((log, idx) => (
-                  <tr key={idx}>
-                    <td>{log.date ? new Date(log.date).toLocaleDateString() : ''}</td>
-                    <td>{log.cigarettes}</td>
-                    <td>{log.feeling}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        <div className="card">
+          <div className="card-header">
+            <h5 className="mb-0">Lịch sử nhật ký hút thuốc</h5>
+          </div>
+          <div className="card-body">
+            {progressHistory.length === 0 ? (
+              <div className="alert alert-info">Chưa có nhật ký tiến trình nào.</div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-striped table-hover">
+                  <thead className="table-dark">
+                    <tr>
+                      <th>Ngày</th>
+                      <th>Số điếu thuốc</th>
+                      <th>Cảm xúc/Ghi chú</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {progressHistory.map((log, idx) => (
+                      <tr key={idx}>
+                        <td>{log.date ? new Date(log.date).toLocaleDateString('vi-VN') : ''}</td>
+                        <td>
+                          <span className="badge bg-primary">{log.cigarettes}</span>
+                        </td>
+                        <td>{log.feeling || 'Không có ghi chú'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
-  // Lọc member duy nhất theo MemberId
-  const uniqueMembers = Array.from(new Map(members.map(m => [m.MemberId, m])).values());
-
   return (
     <div className="container py-4 mt-5">
-      <h3 className="mb-4">Danh sách thành viên đã nhận lịch</h3>
-      {uniqueMembers.length === 0 ? (
-        <div className="alert alert-info">Bạn chưa nhận lịch cho thành viên nào.</div>
+      <h3 className="mb-4">
+        <i className="bi bi-people-fill me-2"></i>
+        Danh sách thành viên được gán
+      </h3>
+      
+      {members.length === 0 ? (
+        <div className="alert alert-info">
+          <i className="bi bi-info-circle me-2"></i>
+          Bạn chưa được gán thành viên nào.
+        </div>
       ) : (
-        <ul className="list-group">
-          {uniqueMembers.map(member => (
-            <li key={member.MemberId} className="list-group-item d-flex align-items-center justify-content-between">
-              <div className="d-flex align-items-center">
-                <i className="bi bi-person-circle" style={{ fontSize: 36, marginRight: 12 }}></i>
-                <span className="fw-bold">{member.MemberName || member.MemberId}</span>
+        <div className="row">
+          {members.map(member => (
+            <div key={member.Id} className="col-md-6 col-lg-4 mb-3">
+              <div className="card h-100 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-3">
+                    <i className="bi bi-person-circle me-3" style={{ fontSize: '2rem', color: '#007bff' }}></i>
+                    <div>
+                      <h6 className="card-title mb-1">{member.Username}</h6>
+                      <small className="text-muted">{member.Email}</small>
+                    </div>
+                  </div>
+                  
+                  {member.appointment && (
+                    <div className="mb-3">
+                      <small className="text-muted">
+                        <i className="bi bi-calendar-event me-1"></i>
+                        Lịch hẹn: {new Date(member.appointment.slotDate).toLocaleDateString('vi-VN')}
+                      </small>
+                    </div>
+                  )}
+                  
+                  <button 
+                    className="btn btn-primary w-100"
+                    onClick={() => navigate(`/coach/member/${member.Id}/progress`)}
+                  >
+                    <i className="bi bi-graph-up me-2"></i>
+                    Xem tiến trình
+                  </button>
+                </div>
               </div>
-              <button className="btn btn-primary" onClick={() => navigate(`/coach/member/${member.MemberId}/progress`)}>
-                Xem tiến trình
-              </button>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

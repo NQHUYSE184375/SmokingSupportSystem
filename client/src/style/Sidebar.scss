@@ -119,4 +119,22 @@
     background: linear-gradient(to bottom, rgba(47, 53, 66, 0), #2f3542);
     pointer-events: none;
   }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 } 

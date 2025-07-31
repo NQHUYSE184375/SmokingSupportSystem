@@ -70,23 +70,23 @@ const SidebarUser = ({ show, onClose, user, menuItems }) => {
         <ul className="nav nav-pills flex-column mb-auto">
           {items && items.map(item => (
             <li className="nav-item mb-2" key={item.href}>
-              <Link to={item.href} className="nav-link text-white" onClick={onClose}>
+              <Link to={item.href} className="nav-link text-white text-center" onClick={onClose} style={{textAlign: 'center'}}>
                 <i className={`bi ${item.icon} me-2`}></i>{item.label}
               </Link>
             </li>
           ))}
           {authUser && authUser.role === 'memberVip' && (
             <li className="nav-item mb-2">
-              <Link to="/feedback-coach" className="nav-link text-white">
+              <Link to="/feedback-coach" className="nav-link text-white text-center" style={{textAlign: 'center'}}>
                 <i className="bi bi-star me-2"></i>Đánh giá HLV
               </Link>
             </li>
           )}
           <li className="nav-item mt-4">
-            <button className="btn btn-outline-light w-100" onClick={() => {
+            <button className="btn btn-outline-light w-100 text-center" onClick={() => {
               localStorage.clear();
               window.location.href = '/login';
-            }}>
+            }} style={{textAlign: 'center'}}>
               <i className="bi bi-box-arrow-right me-2"></i>Đăng xuất
             </button>
           </li>
