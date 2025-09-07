@@ -11,6 +11,6 @@ A Smoking Cessation Support Platform that connects users with the community and 
 - **💎 Premium Services**: VIP features and priority support
 
 ## Tech Stack
-**Frontend:** React 18, Material-UI, Bootstrap, Chart.js, Socket.io  
+**Frontend:** ReactJS, Material-UI, Bootstrap, Chart.js, Socket.io  
 **Backend:** Node.js, Express, JWT, Socket.io, Swagger  
 **Database:** Microsoft SQL Server
