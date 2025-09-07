@@ -6,6 +6,17 @@ import '../style/AdminUserPage.scss';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 
+// Format tiền theo định dạng Việt Nam
+const formatMoney = (value) => {
+  if (!value || value === 0) return '0 VNĐ';
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value);
+};
+
 const AdminUserPage = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -637,7 +648,7 @@ const AdminUserPage = () => {
                                           </div>
                                           <div className="row info-row align-items-center mb-2">
                                             <div className="col-6 info-label">Giá/gói:</div>
-                                            <div className="col-6 info-value">{member.costPerPack?.toLocaleString('vi-VN') || 'N/A'} VNĐ</div>
+                                            <div className="col-6 info-value">{member.costPerPack ? formatMoney(member.costPerPack) : 'N/A'}</div>
                                           </div>
                                           <div className="row info-row align-items-center mb-2">
                                             <div className="col-6 info-label">Tần suất hút:</div>
@@ -692,7 +703,7 @@ const AdminUserPage = () => {
                                 <strong>Số điếu/ngày:</strong> {selectedUserDetail.smokingProfile.cigarettesPerDay}
                       </div>
                               <div className="col-md-4">
-                                <strong>Chi phí/gói:</strong> {selectedUserDetail.smokingProfile.costPerPack.toLocaleString('vi-VN')}đ
+                                <strong>Chi phí/gói:</strong> {formatMoney(selectedUserDetail.smokingProfile.costPerPack)}
                       </div>
                               <div className="col-md-4">
                                 <strong>Tần suất:</strong> {selectedUserDetail.smokingProfile.smokingFrequency || 'Chưa cập nhật'}

@@ -28,6 +28,7 @@ import AchievementsPage from './pages/AchievementsPage.jsx';
 import CoachChatPage from './pages/CoachChatPage.jsx';
 import AboutPage from './pages/AboutPage.jsx';
 import BookingPage from './pages/BookingPage.jsx';
+import UnauthorizedPage from './components/UnauthorizedPage';
 import CreatePostPage from './pages/CreatePostPage.jsx';
 import AdminPackagePage from './pages/AdminPackagePage.jsx';
 import NotificationsPage from './pages/NotificationsPage';
@@ -67,7 +68,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/" replace />;
+    // Determine the required role to show appropriate message
+    const requiredRole = allowedRoles.includes('memberVip') ? 'memberVip' : allowedRoles[0];
+    return <UnauthorizedPage requiredRole={requiredRole} />;
   }
 
   return children;

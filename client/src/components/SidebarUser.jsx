@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import VipUpgradeModal from './VipUpgradeModal';
 
 const SidebarUser = ({ show, onClose, user, menuItems }) => {
   const { user: authUser } = useAuth();
+  const [showVipModal, setShowVipModal] = useState(false);
+  
   // Nếu không truyền menuItems, xác định theo role member/coach
   let items = menuItems;
   if (!items) {
@@ -13,7 +16,11 @@ const SidebarUser = ({ show, onClose, user, menuItems }) => {
         { href: '/chat-coach', icon: 'bi-chat-dots', label: 'Chat với chuyên gia' },
         { href: '/my-progress', icon: 'bi-graph-up', label: 'Theo dõi quá trình' },
         { href: '/booking', icon: 'bi-calendar-check', label: 'Đặt lịch' },
-        { href: '/create-post', icon: 'bi-plus-square', label: 'Tạo bài đăng mới' },
+        // Conditional create post item based on VIP status
+        ...(user?.role === 'memberVip' 
+          ? [{ href: '/create-post', icon: 'bi-plus-square', label: 'Tạo bài đăng mới' }]
+          : [{ action: 'showVipModal', icon: 'bi-plus-square', label: 'Tạo bài đăng mới', requiresVip: true }]
+        ),
         { href: '/achievements', icon: 'bi-award', label: 'Thành tích' },
       ];
     } else if (user?.role === 'coach') {
@@ -68,11 +75,24 @@ const SidebarUser = ({ show, onClose, user, menuItems }) => {
           </button>
         </div>
         <ul className="nav nav-pills flex-column mb-auto">
-          {items && items.map(item => (
-            <li className="nav-item mb-2" key={item.href}>
-              <Link to={item.href} className="nav-link text-white text-center" onClick={onClose} style={{textAlign: 'center'}}>
-                <i className={`bi ${item.icon} me-2`}></i>{item.label}
-              </Link>
+          {items && items.map((item, index) => (
+            <li className="nav-item mb-2" key={item.href || index}>
+              {item.action === 'showVipModal' ? (
+                <button 
+                  className="nav-link text-white text-center w-100 border-0 bg-transparent position-relative" 
+                  onClick={() => setShowVipModal(true)}
+                  style={{textAlign: 'center'}}
+                >
+                  <i className={`bi ${item.icon} me-2`}></i>{item.label}
+                  {item.requiresVip && (
+                    <i className="fas fa-crown text-warning ms-2" style={{fontSize: '0.8em'}}></i>
+                  )}
+                </button>
+              ) : (
+                <Link to={item.href} className="nav-link text-white text-center" onClick={onClose} style={{textAlign: 'center'}}>
+                  <i className={`bi ${item.icon} me-2`}></i>{item.label}
+                </Link>
+              )}
             </li>
           ))}
           {authUser && authUser.role === 'memberVip' && (
@@ -92,6 +112,12 @@ const SidebarUser = ({ show, onClose, user, menuItems }) => {
           </li>
         </ul>
       </nav>
+      
+      {/* VIP Upgrade Modal */}
+      <VipUpgradeModal 
+        show={showVipModal} 
+        onHide={() => setShowVipModal(false)} 
+      />
     </div>
   );
 };

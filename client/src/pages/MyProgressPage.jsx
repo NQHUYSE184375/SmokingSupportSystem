@@ -44,6 +44,17 @@ const rejectCoachPlan = async (planId) => {
   });
 };
 
+// Format tiền theo định dạng Việt Nam
+const formatMoney = (value) => {
+  if (!value || value === 0) return '0 VNĐ';
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value);
+};
+
 const MyProgressPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date().toLocaleDateString('vi-VN', {
     weekday: 'long',
@@ -863,6 +874,107 @@ const MyProgressPage = () => {
                 <button type="button" className="btn-close" onClick={handleCloseSnackbar} aria-label="Close"></button>
               </div>
             )}
+
+            {/* Pending Coach Plans Section */}
+            {coachPlans.filter(plan => !plan.Status || plan.Status === 'pending').length > 0 && (
+              <div className="mb-4">
+                <div className="card border-warning">
+                  <div className="card-header bg-warning text-dark fw-bold">
+                    <i className="fas fa-clock me-2"></i>
+                    Kế hoạch cai thuốc từ huấn luyện viên đang chờ phản hồi
+                  </div>
+                  <div className="card-body">
+                    <p className="text-muted mb-3">
+                      Huấn luyện viên đã gửi cho bạn {coachPlans.filter(plan => !plan.Status || plan.Status === 'pending').length} kế hoạch cai thuốc. 
+                      Vui lòng xem xét và phản hồi.
+                    </p>
+                    <div className="row">
+                      {coachPlans.filter(plan => !plan.Status || plan.Status === 'pending').map((plan, index) => (
+                        <div key={plan.Id} className="col-12 col-lg-6 mb-3">
+                          <div className="card h-100 border-info">
+                            <div className="card-header bg-light">
+                              <h6 className="mb-0 text-info">
+                                <i className="fas fa-user-md me-2"></i>
+                                Kế hoạch #{index + 1}
+                              </h6>
+                            </div>
+                            <div className="card-body">
+                              <h6 className="card-title text-primary">{plan.Title}</h6>
+                              <p className="card-text"><strong>Mô tả:</strong> {plan.Description}</p>
+                              <div className="mb-2">
+                                <strong>Chi tiết kế hoạch:</strong>
+                                <div className="bg-light p-2 rounded mt-1" style={{fontSize: '0.9em'}}>
+                                  <pre style={{whiteSpace: 'pre-line', margin: 0, fontFamily: 'inherit'}}>
+                                    {plan.PlanDetail}
+                                  </pre>
+                                </div>
+                              </div>
+                              <div className="row">
+                                <div className="col-6">
+                                  <small className="text-muted">
+                                    <i className="fas fa-calendar-start me-1"></i>
+                                    <strong>Bắt đầu:</strong><br/>
+                                    {new Date(plan.StartDate).toLocaleDateString('vi-VN')}
+                                  </small>
+                                </div>
+                                <div className="col-6">
+                                  <small className="text-muted">
+                                    <i className="fas fa-calendar-check me-1"></i>
+                                    <strong>Kết thúc:</strong><br/>
+                                    {new Date(plan.TargetDate).toLocaleDateString('vi-VN')}
+                                  </small>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="card-footer bg-light">
+                              <div className="d-flex gap-2">
+                                <button 
+                                  className="btn btn-success btn-sm flex-fill"
+                                  onClick={async () => {
+                                    try {
+                                      await acceptCoachPlan(plan.Id);
+                                      setSuccess('Đã chấp nhận kế hoạch từ huấn luyện viên!');
+                                      // Refresh coach plans
+                                      const updatedPlans = await getCoachSuggestedPlans();
+                                      setCoachPlans(updatedPlans || []);
+                                      setAcceptedCoachPlans((updatedPlans || []).filter(p => p.Status === 'accepted'));
+                                    } catch (error) {
+                                      setError(error.response?.data?.message || 'Lỗi khi chấp nhận kế hoạch');
+                                    }
+                                  }}
+                                >
+                                  <i className="fas fa-check me-1"></i>
+                                  Chấp nhận
+                                </button>
+                                <button 
+                                  className="btn btn-outline-danger btn-sm flex-fill"
+                                  onClick={async () => {
+                                    try {
+                                      await rejectCoachPlan(plan.Id);
+                                      setSuccess('Đã từ chối kế hoạch từ huấn luyện viên!');
+                                      // Refresh coach plans
+                                      const updatedPlans = await getCoachSuggestedPlans();
+                                      setCoachPlans(updatedPlans || []);
+                                      setAcceptedCoachPlans((updatedPlans || []).filter(p => p.Status === 'accepted'));
+                                    } catch (error) {
+                                      setError(error.response?.data?.message || 'Lỗi khi từ chối kế hoạch');
+                                    }
+                                  }}
+                                >
+                                  <i className="fas fa-times me-1"></i>
+                                  Từ chối
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="row g-4">
               {/* Ô 1: Thông tin Cai thuốc */}
               <div className="col-12 col-md-6">
@@ -1044,7 +1156,7 @@ const MyProgressPage = () => {
                     />
                     {userData.smokingStatus.dailyLog && typeof userData.smokingStatus.dailyLog.savedMoney !== 'undefined' && (
                       <div className="alert alert-info mt-3">
-                        💰 Tiền tiết kiệm hôm nay: <b>{userData.smokingStatus.dailyLog.savedMoney?.toLocaleString('vi-VN')} VNĐ</b>
+                        💰 Tiền tiết kiệm hôm nay: <b>{formatMoney(userData.smokingStatus.dailyLog.savedMoney)}</b>
                       </div>
                     )}
                   </div>

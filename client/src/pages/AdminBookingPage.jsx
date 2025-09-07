@@ -2,6 +2,17 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import '../style/AdminUserPage.scss'; // Tái sử dụng style của AdminUserPage
 
+// Format tiền theo định dạng Việt Nam
+const formatMoney = (value) => {
+  if (!value || value === 0) return '0 VNĐ';
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value);
+};
+
 const AdminBookingPage = () => {
   const [bookings, setBookings] = useState([]);
   const [filteredBookings, setFilteredBookings] = useState([]);
@@ -240,7 +251,7 @@ const AdminBookingPage = () => {
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
                     <h5 className="card-title mb-0">Tổng doanh thu</h5>
-                    <h3 className="mb-0">{stats.totalAmount.toLocaleString('vi-VN')} ₫</h3>
+                    <h3 className="mb-0">{formatMoney(stats.totalAmount)}</h3>
                   </div>
                   <i className="fas fa-money-bill-wave fa-2x opacity-75"></i>
                 </div>
@@ -401,7 +412,7 @@ const AdminBookingPage = () => {
                         </td>
                         <td>
                           <strong className="text-success">
-                            {(booking.Amount || 0).toLocaleString('vi-VN')} ₫
+                            {formatMoney(booking.Amount || 0)}
                           </strong>
                         </td>
                         <td>
